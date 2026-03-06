@@ -5,33 +5,41 @@ import tkinter as tk
 from tkinter import filedialog, scrolledtext, messagebox
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
+
 class UltraKI:
     def __init__(self):
         self.lifesphere_level = 7
+
     def create_key(self):
         return os.urandom(32)
+
     def transform(self, data: bytes):
         transformed = base64.b64encode(data[::-1])
         transformed = base64.b64encode(transformed[::-1])
         transformed = base64.b64encode(transformed[::-1])
         return transformed
+
     def inverse_transform(self, data: bytes):
         tmp = base64.b64decode(data)[::-1]
         tmp = base64.b64decode(tmp)[::-1]
         tmp = base64.b64decode(tmp)[::-1]
         return tmp
+
     def adaptive_key(self):
         keys = [os.urandom(32) for _ in range(self.lifesphere_level)]
         mixed_key = keys[0]
         for k in keys[1:]:
             mixed_key = bytes(a ^ b for a, b in zip(mixed_key, k))
         return mixed_key
+
     def analyze_text(self, text: str):
         return f"UltraKI analysiert: '{text}'"
+
 
 class UltraEncryptApp:
     def __init__(self):
         self.ki = UltraKI()
+
     def encrypt_text(self, plaintext: str):
         key = self.ki.adaptive_key()
         aesgcm = AESGCM(key)
@@ -41,12 +49,14 @@ class UltraEncryptApp:
         return {"key": base64.b64encode(key).decode(),
                 "nonce": base64.b64encode(nonce).decode(),
                 "ciphertext": transformed.decode()}
+
     def decrypt_text(self, encrypted_data: dict):
         key = base64.b64decode(encrypted_data["key"])
         nonce = base64.b64decode(encrypted_data["nonce"])
         ciphertext = self.ki.inverse_transform(encrypted_data["ciphertext"].encode())
         aesgcm = AESGCM(key)
         return aesgcm.decrypt(nonce, ciphertext, None).decode()
+
     def encrypt_file(self, filepath: str):
         with open(filepath, "rb") as f:
             data = f.read()
@@ -61,6 +71,7 @@ class UltraEncryptApp:
         return {"key": base64.b64encode(key).decode(),
                 "nonce": base64.b64encode(nonce).decode(),
                 "file": out_path}
+
     def decrypt_file(self, encrypted_file: str, key: str, nonce: str):
         with open(encrypted_file, "rb") as f:
             data = f.read()
@@ -72,6 +83,7 @@ class UltraEncryptApp:
             f.write(plaintext)
         return out_path
 
+
 class UltraChatAppGUI:
     def __init__(self, root):
         self.app = UltraEncryptApp()
@@ -79,15 +91,19 @@ class UltraChatAppGUI:
         root.title("Ultra ChatApp - Spiegel KI Design")
         root.configure(bg="#111111")
         root.geometry("900x600")
-        self.chat_window = scrolledtext.ScrolledText(root, width=100, height=25, bg="#222222", fg="#FFFFFF", font=("Consolas", 12))
+        self.chat_window = scrolledtext.ScrolledText(root, width=100, height=25, bg="#222222", fg="#FFFFFF",
+                                                     font=("Consolas", 12))
         self.chat_window.pack(padx=10, pady=10)
-        self.entry = tk.Entry(root, width=80, bg="#333333", fg="#FFFFFF", insertbackground='white', font=("Consolas", 12))
-        self.entry.pack(side=tk.LEFT, padx=(10,0), pady=(0,10))
+        self.entry = tk.Entry(root, width=80, bg="#333333", fg="#FFFFFF", insertbackground='white',
+                              font=("Consolas", 12))
+        self.entry.pack(side=tk.LEFT, padx=(10, 0), pady=(0, 10))
         self.entry.bind("<Return>", self.send_text)
-        self.send_button = tk.Button(root, text="Senden", command=self.send_text, bg="#444444", fg="#FFFFFF", font=("Consolas", 12))
-        self.send_button.pack(side=tk.LEFT, padx=(5,0), pady=(0,10))
-        self.file_button = tk.Button(root, text="Datei verschlüsseln", command=self.encrypt_file_gui, bg="#555555", fg="#FFFFFF", font=("Consolas", 12))
-        self.file_button.pack(side=tk.LEFT, padx=(5,10), pady=(0,10))
+        self.send_button = tk.Button(root, text="Senden", command=self.send_text, bg="#444444", fg="#FFFFFF",
+                                     font=("Consolas", 12))
+        self.send_button.pack(side=tk.LEFT, padx=(5, 0), pady=(0, 10))
+        self.file_button = tk.Button(root, text="Datei verschlüsseln", command=self.encrypt_file_gui, bg="#555555",
+                                     fg="#FFFFFF", font=("Consolas", 12))
+        self.file_button.pack(side=tk.LEFT, padx=(5, 10), pady=(0, 10))
 
     def send_text(self, event=None):
         text = self.entry.get()
@@ -106,9 +122,11 @@ class UltraChatAppGUI:
         if file_path:
             try:
                 result = self.app.encrypt_file(file_path)
-                messagebox.showinfo("Datei verschlüsselt", f"Datei gespeichert: {result['file']}\nKey: {result['key']}\nNonce: {result['nonce']}")
+                messagebox.showinfo("Datei verschlüsselt",
+                                    f"Datei gespeichert: {result['file']}\nKey: {result['key']}\nNonce: {result['nonce']}")
             except Exception as e:
                 messagebox.showerror("Fehler", str(e))
+
 
 if __name__ == "__main__":
     root = tk.Tk()
@@ -121,11 +139,13 @@ import tkinter as tk
 from tkinter import filedialog, scrolledtext, messagebox
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
+
 # ==============================
 # Ultra KI + Lebensblume KI + neuartige KI
 # ==============================
 class UltraKI:
     """Haupt-Klasse für alle KI-Funktionen"""
+
     def __init__(self):
         self.lifesphere_level = 7  # adaptive Verschlüsselungsschichten
 
@@ -157,6 +177,7 @@ class UltraKI:
     def analyze_text(self, text: str):
         # KI-Textanalyse Placeholder
         return f"UltraKI analysiert: '{text}'"
+
 
 # ==============================
 # Verschlüsselungs-Engine
@@ -212,6 +233,7 @@ class UltraEncryptApp:
             f.write(plaintext)
         return out_path
 
+
 # ==============================
 # GUI im Spiegel-Design
 # ==============================
@@ -224,20 +246,24 @@ class UltraChatAppGUI:
         root.geometry("900x600")
 
         # Chat-Fenster
-        self.chat_window = scrolledtext.ScrolledText(root, width=100, height=25, bg="#222222", fg="#FFFFFF", font=("Consolas", 12))
+        self.chat_window = scrolledtext.ScrolledText(root, width=100, height=25, bg="#222222", fg="#FFFFFF",
+                                                     font=("Consolas", 12))
         self.chat_window.pack(padx=10, pady=10)
 
         # Eingabefeld
-        self.entry = tk.Entry(root, width=80, bg="#333333", fg="#FFFFFF", insertbackground='white', font=("Consolas", 12))
-        self.entry.pack(side=tk.LEFT, padx=(10,0), pady=(0,10))
+        self.entry = tk.Entry(root, width=80, bg="#333333", fg="#FFFFFF", insertbackground='white',
+                              font=("Consolas", 12))
+        self.entry.pack(side=tk.LEFT, padx=(10, 0), pady=(0, 10))
         self.entry.bind("<Return>", self.send_text)
 
         # Buttons
-        self.send_button = tk.Button(root, text="Senden", command=self.send_text, bg="#444444", fg="#FFFFFF", font=("Consolas", 12))
-        self.send_button.pack(side=tk.LEFT, padx=(5,0), pady=(0,10))
+        self.send_button = tk.Button(root, text="Senden", command=self.send_text, bg="#444444", fg="#FFFFFF",
+                                     font=("Consolas", 12))
+        self.send_button.pack(side=tk.LEFT, padx=(5, 0), pady=(0, 10))
 
-        self.file_button = tk.Button(root, text="Datei verschlüsseln", command=self.encrypt_file_gui, bg="#555555", fg="#FFFFFF", font=("Consolas", 12))
-        self.file_button.pack(side=tk.LEFT, padx=(5,10), pady=(0,10))
+        self.file_button = tk.Button(root, text="Datei verschlüsseln", command=self.encrypt_file_gui, bg="#555555",
+                                     fg="#FFFFFF", font=("Consolas", 12))
+        self.file_button.pack(side=tk.LEFT, padx=(5, 10), pady=(0, 10))
 
     # Text senden
     def send_text(self, event=None):
@@ -260,9 +286,11 @@ class UltraChatAppGUI:
         if file_path:
             try:
                 result = self.app.encrypt_file(file_path)
-                messagebox.showinfo("Datei verschlüsselt", f"Datei gespeichert: {result['file']}\nKey: {result['key']}\nNonce: {result['nonce']}")
+                messagebox.showinfo("Datei verschlüsselt",
+                                    f"Datei gespeichert: {result['file']}\nKey: {result['key']}\nNonce: {result['nonce']}")
             except Exception as e:
                 messagebox.showerror("Fehler", str(e))
+
 
 # ==============================
 # Start GUI
@@ -271,4 +299,3 @@ if __name__ == "__main__":
     root = tk.Tk()
     gui = UltraChatAppGUI(root)
     root.mainloop()
-

@@ -1,0 +1,76 @@
+UltraKI-Complete/
+│
+├── app.py
+├── requirements.txt
+├── .env
+├── templates/
+│     └── index.html
+└── static/
+      ├── style.css
+      └── script.js
+from flask import Flask, request, jsonify, render_template
+import requests
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+app = Flask(__name__)
+
+API_URL = os.getenv("API_URL")
+API_KEY = os.getenv("ULTRAKI_KEY")
+
+@app.route("/")
+def home():
+    return render_template("index.html")
+
+@app.route("/chat", methods=["POST"])
+def chat():
+    user_input = request.json.get("message")
+
+    response = requests.post(
+        API_URL,
+        headers={"Authorization": f"Bearer {API_KEY}"},
+        json={"prompt": user_input}
+    )
+
+    return jsonify(response.json())
+
+if __name__ == "__main__":
+    app.run(debug=True)
+    flask
+requests
+python-dotenv
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Ultra KI</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="chat-container">
+        <div id="chat-box"></div>
+        <input id="input" type="text" placeholder="Schreibe etwas...">
+        <button onclick="sendMessage()">Senden</button>
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>
+async function sendMessage() {
+    const input = document.getElementById("input");
+    const message = input.value;
+
+    const response = await fetch("/chat", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ message })
+    });
+
+    const data = await response.json();
+    document.getElementById("chat-box").innerHTML +=
+        "<div><b>Du:</b> " + message + "</div>" +
+        "<div><b>KI:</b> " + JSON.stringify(data) + "</div>";
+
+    input.value = "";
+}

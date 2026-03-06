@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Ultra.KI.HTML</title>
+</head>
+QuantumAI-Ultra/
+│
+├─ frontend/
+│ ├─ index.html # Chat-Oberfläche + Canvas
+│ ├─ style.css # Anthrazit + Heilige Geometrien
+│ └─ script.js # Chatlogik + Canvas + API-Anbindung
+│
+├─ backend/
+│ ├─ server.js # Node.js Server, empfängt Chat-Anfragen
+│ ├─ package.json # Dependencies (Express etc.)
+│ └─ .env # ULTRAKI_KEY + API_URL (nicht ins Repo!)
+│
+├─ README.md # Anleitung für GitHub + Render
+└─ .gitignore # Ignoriert .env
+
+// server.js
+require('dotenv').config();
+const express = require('express');
+const fetch = require('node-fetch');
+const cors = require('cors');
+const app = express();
+
+app.use(cors());
+app.use(express.json());
+
+const PORT = process.env.PORT || 5000;
+const API_URL = process.env.API_URL;
+const API_KEY = process.env.ULTRAKI_KEY;
+
+app.post('/chat', async (req, res) => {
+const { prompt } = req.body;
+if (!prompt) return res.json({ response: "Keine Eingabe" });
+
+try {
+const response = await fetch(API_URL, {
+method: 'POST',
+headers: {
+'Content-Type': 'application/json',
+'Authorization': `Bearer ${API_KEY}`
+},
+body: JSON.stringify({ prompt })
+});
+const data = await response.json();
+res.json({ response: data.response || "Keine Antwort" });
+} catch(e) {
+console.error(e);
+res.json({ response: "Fehler bei der KI-Anfrage." });
+}
+});
+
+app.listen(PORT, () => console.log(`Ultra-KI Backend läuft auf Port ${PORT}`));
+{
+"name": "quantum-ultra-backend",
+"version": "1.0.0",
+"main": "server.js",
+"scripts": {
+"start": "node server.js"
+},
+"dependencies": {
+"cors": "^2.8.5",
+"dotenv": "^16.0.3",
+"express": "^4.18.2",
+"node-fetch": "^3.3.1"
+}
+}
+const chatBox = document.getElementById("chat-box");
+const userInput = document.getElementById("user-input");
+const sendBtn = document.getElementById("send-btn");
+
+async function sendMessage() {
+const message = userInput.value.trim();
+if (!message) return;
+appendMessage(message, "user");
+userInput.value = "";
+
+try {
+const res = await fetch("https://DEIN_RENDER_BACKEND/chat", { // hier Render Backend URL
+method: "POST",
+headers: { "Content-Type": "application/json" },
+body: JSON.stringify({ prompt: message })
+});
+const data = await res.json();
+appendMessage(data.response, "bot");
+} catch(e) {
+appendMessage("Fehler beim Backend.", "bot");
+console.error(e);
+}
+
+chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+function appendMessage(text, sender) {
+const msgDiv = document.createElement("div");
+msgDiv.classList.add("message", sender);
+msgDiv.textContent = text;
+chatBox.appendChild(msgDiv);
+}
+
+sendBtn.addEventListener("click", sendMessage);
+userInput.addEventListener("keypress", e => {
+if(e.key === "Enter") sendMessage();
+});

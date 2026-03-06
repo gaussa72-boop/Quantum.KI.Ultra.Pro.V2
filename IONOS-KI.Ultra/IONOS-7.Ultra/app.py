@@ -1,23 +1,18 @@
-from openai import OpenAI
 import os
+
 from dotenv import load_dotenv
+from flask import Flask, render_template, request, jsonify
+from openai import OpenAI
 
 load_dotenv()
-
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-from flask import Flask, request, jsonify
-from openai import OpenAI
-import os
 
 app = Flask(__name__)
-
-# API Key hier direkt einsetzen (nur lokal!)
-client = OpenAI(api_key="DEIN_OPENAI_API_KEY_HIER")
 
 
 @app.route("/")
 def home():
-    return "UltraKI Pro V2 läuft!"
+    return render_template("index.html")
 
 
 @app.route("/chat", methods=["POST"])
@@ -32,11 +27,9 @@ def chat():
         ]
     )
 
-    return jsonify({
-        "response": response.choices[0].message.content
-    })
+    return jsonify({"reply": response.choices[0].message.content})
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
-    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
