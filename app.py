@@ -62,11 +62,13 @@ def _security_headers(response):
     response.headers.pop("Server", None)
     return response
 # --- End security hardening ---
-MODEL = os.getenv("OPENAI_MODEL", "gpt-5.6")
+MODEL = os.getenv("OPENAI_MODEL", "openai/gpt-5.6-luna")
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "").strip()
 WEB = os.getenv("ENABLE_WEB_SEARCH", "true").lower() == "true"
 AI_ENABLED = os.getenv("AI_ENABLED", "true").lower() == "true"
 MAX_INPUT = max(1000, min(int(os.getenv("MAX_INPUT_CHARS", "12000")), 30000))
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY")) if os.getenv("OPENAI_API_KEY") else None
+router_client = OpenAI(api_key=OPENROUTER_API_KEY, base_url="https://openrouter.ai/api/v1") if OPENROUTER_API_KEY else None
 SYSTEM = """Du bist Quantum KI Ultra Pro V2, ein leistungsfähiger Forschungs-, Coding- und Projektassistent.
 Antworte in der Sprache des Nutzers. Arbeite strukturiert und konkret. Trenne Fakten, Annahmen und Unsicherheit.
 Nutze Web-Recherche für aktuelle Informationen, wenn sie aktiviert ist. Erfinde keine Quellen, Daten, Aktionen oder Ergebnisse.
@@ -91,19 +93,19 @@ def clean_history(history):
             out.append({"role": role, "content": content[:MAX_INPUT]})
     return out
 
-def ask(message, history):
+def ask(message, history, selected_model=None):
     if not AI_ENABLED: return "Die KI ist derzeit deaktiviert."
-    if not client: return "OPENAI_API_KEY ist in Render nicht gesetzt."
+    if not client and not router_client: return "OPENAI_API_KEY oder OPENROUTER_API_KEY ist in Render nicht gesetzt."
     try:
         kwargs = {
-            "model": MODEL,
+            "model": (selected_model or MODEL),
             "store": False,
             "input": [{"role": "system", "content": SYSTEM}, *clean_history(history), {"role": "user", "content": message}],
         }
         if WEB:
             kwargs["tools"] = [{"type": "web_search", "search_context_size": "medium"}]
             kwargs["tool_choice"] = "auto"
-        response = client.responses.create(**kwargs)
+        active = router_client if (router_client and selected_model) else client\n        response = active.responses.create(**kwargs)
         return response.output_text or "Keine Antwort erhalten."
     except Exception:
         app.logger.exception("AI API failure")
@@ -132,7 +134,7 @@ def chat():
     message = str(data.get("message") or "").strip()
     if not message: return jsonify({"error":"message is required"}), 400
     if len(message) > MAX_INPUT: return jsonify({"error":f"message is too long (max {MAX_INPUT} characters)"}), 413
-    return jsonify({"ok":True,"reply":ask(message, data.get("history")),"model":MODEL,"web_search":WEB})
+    return jsonify({"ok":True,"reply":ask(message, data.get("history"), data.get("model")),"model":data.get("model") or MODEL,"web_search":WEB})
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", "10000")))
