@@ -117,6 +117,19 @@ def ask(message, history, selected_model=None):
 @app.get("/")
 def home(): return send_from_directory("templates", "index.html")
 
+
+@app.get("/login")
+def login_page():
+    return send_from_directory("templates", "login.html")
+
+@app.get("/register")
+def register_page():
+    return send_from_directory("templates", "register.html")
+
+@app.get("/dashboard")
+def dashboard_page():
+    return send_from_directory("templates", "dashboard.html")
+
 @app.get("/engine")
 def engine(): return send_from_directory(".", "game_engine.html")
 
