@@ -105,7 +105,8 @@ def ask(message, history, selected_model=None):
         if WEB:
             kwargs["tools"] = [{"type": "web_search", "search_context_size": "medium"}]
             kwargs["tool_choice"] = "auto"
-        active = router_client if (router_client and selected_model) else client\n        response = active.responses.create(**kwargs)
+        active = router_client if (router_client and selected_model) else client
+        response = active.responses.create(**kwargs)
         return response.output_text or "Keine Antwort erhalten."
     except Exception:
         app.logger.exception("AI API failure")
@@ -131,7 +132,8 @@ def chat():
     ip = request.headers.get("X-Forwarded-For", request.remote_addr or "unknown").split(",")[0].strip()
     if not allow(ip): return jsonify({"error":"Zu viele Anfragen. Bitte kurz warten."}), 429
     data = request.get_json(silent=True) or {}
-    message = str(data.get("message") or "").strip()\n    selected_model=str(data.get("model") or MODEL).strip()
+    message = str(data.get("message") or "").strip()
+    selected_model=str(data.get("model") or MODEL).strip()
     if not message: return jsonify({"error":"message is required"}), 400
     if len(message) > MAX_INPUT: return jsonify({"error":f"message is too long (max {MAX_INPUT} characters)"}), 413
     return jsonify({"ok":True,"reply":ask(message, data.get("history"), data.get("model")),"model":data.get("model") or MODEL,"web_search":WEB})
