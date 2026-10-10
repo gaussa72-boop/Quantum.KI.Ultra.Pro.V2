@@ -1,7 +1,7 @@
 import os
 from collections import defaultdict, deque
 from time import monotonic
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, jsonify, request, send_from_directory, redirect
 from openai import OpenAI
 from auth_core import register_user, login_user, resolve_user, logout_user
 from ionos_core.ionos_ai import run as run_ionos7
@@ -115,7 +115,12 @@ def ask(message, history, selected_model=None):
         return "Die KI-Schnittstelle ist momentan nicht erreichbar. Prüfe API-Key, Guthaben und Render-Logs."
 
 @app.get("/")
-def home(): return send_from_directory("templates", "index.html")
+def home():
+    host = request.host.split(":", 1)[0].lower()
+    if request.method == "GET" and host in {"ionos-7.onrender.com", "quantum-ki-ultra-pro-v2-renewed.onrender.com"}:
+        query = ("?" + request.query_string.decode("utf-8", "ignore")) if request.query_string else ""
+        return redirect("https://quantum-ki-ultra-pro-v2.onrender.com" + request.path + query, code=302)
+    return send_from_directory("templates", "index.html")
 
 
 @app.get("/login")
