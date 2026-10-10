@@ -4,6 +4,7 @@ from time import monotonic
 from flask import Flask, jsonify, request, send_from_directory
 from openai import OpenAI
 from auth_core import register_user, login_user, resolve_user, logout_user
+from ionos_core.ionos_ai import run as run_ionos7
 
 app = Flask(__name__)
 
@@ -182,7 +183,7 @@ def ionos7_chat():
     if len(message) > MAX_INPUT:
         return jsonify({"error": f"message is too long (max {MAX_INPUT} characters)"}), 413
     prompt = "Du bist IONOS-7, der integrierte Forschungs- und Projektassistent. Antworte passend zur Sprache des Nutzers. " + message
-    reply = ask(prompt, data.get("history"), data.get("model"))
+    reply = run_ionos7(message, data.get("model") or os.getenv("OPENAI_MODEL", "gpt-4o-mini"))
     return jsonify({"ok": True, "project": "IONOS-7", "reply": reply, "model": data.get("model") or MODEL})
 
 @app.get("/health")
