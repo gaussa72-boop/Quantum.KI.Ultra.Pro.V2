@@ -29,8 +29,11 @@ def run(message: str, model: Optional[str] = None) -> str:
     if client is None:
         return _fallback(message)
     try:
+        model_name = model or os.getenv("OPENROUTER_MODEL") or os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+        if os.getenv("OPENROUTER_API_KEY") and not os.getenv("OPENAI_API_KEY") and "/" not in model_name:
+            model_name = "openai/" + model_name
         response = client.chat.completions.create(
-            model=model or os.getenv("OPENROUTER_MODEL") or os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+            model=model_name,
             messages=[
                 {"role": "system", "content": "Du bist IONOS-7. Antworte klar, hilfreich und technisch korrekt. Projektstatus: " + project + " Benutzergedächtnis: " + memory},
                 {"role": "user", "content": message},
