@@ -189,7 +189,7 @@ def ionos7_chat():
 @app.get("/health")
 @app.get("/api/health")
 def health():
-    return jsonify({"status":"ok","project":"QUANTUM KI ULTRA PRO V2","model":MODEL,"ai_enabled":AI_ENABLED,"web_search":WEB,"openai_configured":bool(client)})
+    return jsonify({"status":"ok","project":"QUANTUM KI ULTRA PRO V2","model":MODEL,"ai_enabled":AI_ENABLED,"web_search":WEB,"openai_configured":bool(client or router_client)})
 
 @app.post("/api/chat")
 @app.post("/chat")
