@@ -6,8 +6,10 @@ from .project_memory import get_project_status
 
 
 def _client() -> Optional[OpenAI]:
-    key = os.getenv("OPENAI_API_KEY")
-    base_url = os.getenv("OPENAI_BASE_URL") or None
+    openai_key = os.getenv("OPENAI_API_KEY")
+    router_key = os.getenv("OPENROUTER_API_KEY")
+    key = openai_key or router_key
+    base_url = os.getenv("OPENAI_BASE_URL") or ("https://openrouter.ai/api/v1" if router_key and not openai_key else None)
     return OpenAI(api_key=key, base_url=base_url) if key else None
 
 
@@ -28,7 +30,7 @@ def run(message: str, model: Optional[str] = None) -> str:
         return _fallback(message)
     try:
         response = client.chat.completions.create(
-            model=model or os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+            model=model or os.getenv("OPENROUTER_MODEL") or os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
             messages=[
                 {"role": "system", "content": "Du bist IONOS-7. Antworte klar, hilfreich und technisch korrekt. Projektstatus: " + project + " Benutzergedächtnis: " + memory},
                 {"role": "user", "content": message},
