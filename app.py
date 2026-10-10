@@ -64,7 +64,7 @@ def _security_headers(response):
     response.headers.pop("Server", None)
     return response
 # --- End security hardening ---
-MODEL = os.getenv("OPENAI_MODEL", "openai/gpt-5.6-luna")
+MODEL = os.getenv("OPENAI_MODEL", "gpt-5.6")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "").strip()
 WEB = os.getenv("ENABLE_WEB_SEARCH", "true").lower() == "true"
 AI_ENABLED = os.getenv("AI_ENABLED", "true").lower() == "true"
@@ -99,16 +99,25 @@ def ask(message, history, selected_model=None):
     if not AI_ENABLED: return "Die KI ist derzeit deaktiviert."
     if not client and not router_client: return "OPENAI_API_KEY oder OPENROUTER_API_KEY ist in Render nicht gesetzt."
     try:
+        clean = clean_history(history)
+        if router_client:
+            model = selected_model or os.getenv("OPENROUTER_MODEL") or (MODEL if "/" in MODEL else "openai/" + MODEL)
+            if "/" not in model:
+                model = "openai/" + model
+            response = router_client.chat.completions.create(
+                model=model,
+                messages=[{"role": "system", "content": SYSTEM}, *clean, {"role": "user", "content": message}],
+            )
+            return response.choices[0].message.content or "Keine Antwort erhalten."
         kwargs = {
             "model": (selected_model or MODEL),
             "store": False,
-            "input": [{"role": "system", "content": SYSTEM}, *clean_history(history), {"role": "user", "content": message}],
+            "input": [{"role": "system", "content": SYSTEM}, *clean, {"role": "user", "content": message}],
         }
         if WEB:
             kwargs["tools"] = [{"type": "web_search", "search_context_size": "medium"}]
             kwargs["tool_choice"] = "auto"
-        active = router_client if (router_client and selected_model) else client
-        response = active.responses.create(**kwargs)
+        response = client.responses.create(**kwargs)
         return response.output_text or "Keine Antwort erhalten."
     except Exception:
         app.logger.exception("AI API failure")
