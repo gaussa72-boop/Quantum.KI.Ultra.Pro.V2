@@ -3,6 +3,7 @@ from collections import defaultdict, deque
 from time import monotonic
 from flask import Flask, jsonify, request, send_from_directory
 from openai import OpenAI
+from auth_core import register_user, login_user, resolve_user, logout_user
 
 app = Flask(__name__)
 
@@ -121,6 +122,41 @@ def engine(): return send_from_directory(".", "game_engine.html")
 @app.get("/game_engine.js")
 def engine_js(): return send_from_directory(".", "game_engine.js")
 
+
+
+@app.post("/api/auth/register")
+def api_auth_register():
+    data = request.get_json(silent=True) or {}
+    try:
+        user = register_user(data.get("username"), data.get("email"), data.get("password"))
+        return jsonify({"ok": True, "user": user}), 201
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+@app.post("/api/auth/login")
+def api_auth_login():
+    data = request.get_json(silent=True) or {}
+    try:
+        result = login_user(data.get("identifier") or data.get("username") or data.get("email"), data.get("password"))
+        return jsonify({"ok": True, **result}), 200
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 401
+
+@app.get("/api/auth/me")
+def api_auth_me():
+    auth_header = request.headers.get("Authorization", "")
+    token = auth_header[7:].strip() if auth_header.lower().startswith("bearer ") else ""
+    user = resolve_user(token)
+    if not user:
+        return jsonify({"error": "Unauthorized"}), 401
+    return jsonify({"ok": True, "user": user}), 200
+
+@app.post("/api/auth/logout")
+def api_auth_logout():
+    auth_header = request.headers.get("Authorization", "")
+    token = auth_header[7:].strip() if auth_header.lower().startswith("bearer ") else ""
+    logout_user(token)
+    return jsonify({"ok": True}), 200
 
 @app.get("/api/ionos7/status")
 def ionos7_status():
