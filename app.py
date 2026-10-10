@@ -121,6 +121,34 @@ def engine(): return send_from_directory(".", "game_engine.html")
 @app.get("/game_engine.js")
 def engine_js(): return send_from_directory(".", "game_engine.js")
 
+
+@app.get("/api/ionos7/status")
+def ionos7_status():
+    return jsonify({
+        "project": "IONOS-7",
+        "integrated_into": "Quantum.KI.Ultra.Pro.V2",
+        "status": "ready",
+        "ai_enabled": AI_ENABLED,
+        "provider_configured": bool(client or router_client),
+        "shared_chat_api": "/api/ionos7/chat",
+        "shared_health_api": "/health"
+    })
+
+@app.post("/api/ionos7/chat")
+def ionos7_chat():
+    ip = request.headers.get("X-Forwarded-For", request.remote_addr or "unknown").split(",")[0].strip()
+    if not allow(ip):
+        return jsonify({"error": "Zu viele Anfragen. Bitte kurz warten."}), 429
+    data = request.get_json(silent=True) or {}
+    message = str(data.get("message") or "").strip()
+    if not message:
+        return jsonify({"error": "message is required"}), 400
+    if len(message) > MAX_INPUT:
+        return jsonify({"error": f"message is too long (max {MAX_INPUT} characters)"}), 413
+    prompt = "Du bist IONOS-7, der integrierte Forschungs- und Projektassistent. Antworte passend zur Sprache des Nutzers. " + message
+    reply = ask(prompt, data.get("history"), data.get("model"))
+    return jsonify({"ok": True, "project": "IONOS-7", "reply": reply, "model": data.get("model") or MODEL})
+
 @app.get("/health")
 @app.get("/api/health")
 def health():
