@@ -23,11 +23,13 @@ def _fallback(message: str) -> str:
 
 
 def run(message: str, model: Optional[str] = None) -> str:
+    if os.getenv("AI_ENABLED", "true").strip().lower() != "true":
+        raise RuntimeError("IONOS-7 KI ist mit AI_ENABLED=false deaktiviert.")
     client = _client()
+    if client is None:
+        raise RuntimeError("OPENAI_API_KEY oder OPENROUTER_API_KEY fehlt in Render.")
     memory = get_memory_string()
     project = get_project_status()
-    if client is None:
-        return _fallback(message)
     try:
         model_name = model or os.getenv("OPENROUTER_MODEL") or os.getenv("OPENAI_MODEL", "gpt-4o-mini")
         if os.getenv("OPENROUTER_API_KEY") and not os.getenv("OPENAI_API_KEY") and "/" not in model_name:
@@ -46,5 +48,5 @@ def run(message: str, model: Optional[str] = None) -> str:
             if name:
                 save_fact("Name", name)
         return reply
-    except Exception:
-        return _fallback(message)
+    except Exception as exc:
+        raise ValueError("IONOS-7 KI-Anfrage fehlgeschlagen. Prüfe API-Key, Modellzugriff und Guthaben.") from exc
