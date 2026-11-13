@@ -218,9 +218,13 @@ def ionos7_chat():
         return jsonify({"error": "message is required"}), 400
     if len(message) > MAX_INPUT:
         return jsonify({"error": f"message is too long (max {MAX_INPUT} characters)"}), 413
-    prompt = "Du bist IONOS-7, der integrierte Forschungs- und Projektassistent. Antworte passend zur Sprache des Nutzers. " + message
-    reply = run_ionos7(message, data.get("model") or os.getenv("OPENAI_MODEL", "gpt-4o-mini"))
-    return jsonify({"ok": True, "project": "IONOS-7", "reply": reply, "model": data.get("model") or MODEL})
+    try:
+        reply = run_ionos7(message, data.get("model") or MODEL)
+        return jsonify({"ok": True, "project": "IONOS-7", "reply": reply, "model": MODEL}), 200
+    except RuntimeError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 503
+    except ValueError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 502
 
 @app.get("/health")
 @app.get("/api/health")
