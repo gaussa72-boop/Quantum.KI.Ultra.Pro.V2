@@ -1,0 +1,15 @@
+{
+  "expo": {
+    "name": "Quantum KI Ultra",
+    "slug": "quantum-ki-ultra",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "bundleIdentifier": "com.gaussa.quantumki"
+    },
+    "android": {
+      "package": "com.gaussa.quantumki"
+    }
+  }
+}
