@@ -6,11 +6,16 @@ from .project_memory import get_project_status
 
 
 def _client() -> Optional[OpenAI]:
-    openai_key = os.getenv("OPENAI_API_KEY")
-    router_key = os.getenv("OPENROUTER_API_KEY")
-    key = openai_key or router_key
-    base_url = os.getenv("OPENAI_BASE_URL") or ("https://openrouter.ai/api/v1" if router_key and not openai_key else None)
-    return OpenAI(api_key=key, base_url=base_url) if key else None
+    openai_key = os.getenv("OPENAI_API_KEY", "").strip()
+    router_key = os.getenv("OPENROUTER_API_KEY", "").strip()
+    provider = os.getenv("AI_PROVIDER", "openai").strip().lower()
+    if provider == "openrouter" and router_key:
+        return OpenAI(api_key=router_key, base_url="https://openrouter.ai/api/v1")
+    if openai_key:
+        return OpenAI(api_key=openai_key)
+    if router_key:
+        return OpenAI(api_key=router_key, base_url="https://openrouter.ai/api/v1")
+    return None
 
 
 def _fallback(message: str) -> str:
