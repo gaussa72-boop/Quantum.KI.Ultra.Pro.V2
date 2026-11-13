@@ -64,13 +64,24 @@ def _security_headers(response):
     response.headers.pop("Server", None)
     return response
 # --- End security hardening ---
-MODEL = os.getenv("OPENAI_MODEL", "gpt-5.6")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "").strip()
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini").strip()
+OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "openai/gpt-4o-mini").strip()
+AI_PROVIDER = os.getenv("AI_PROVIDER", "openai").strip().lower()
 WEB = os.getenv("ENABLE_WEB_SEARCH", "true").lower() == "true"
 AI_ENABLED = os.getenv("AI_ENABLED", "true").lower() == "true"
 MAX_INPUT = max(1000, min(int(os.getenv("MAX_INPUT_CHARS", "12000")), 30000))
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY")) if os.getenv("OPENAI_API_KEY") else None
+client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
 router_client = OpenAI(api_key=OPENROUTER_API_KEY, base_url="https://openrouter.ai/api/v1") if OPENROUTER_API_KEY else None
+if AI_PROVIDER == "openrouter" and router_client:
+    ACTIVE_PROVIDER, ACTIVE_CLIENT, MODEL = "openrouter", router_client, OPENROUTER_MODEL
+elif client:
+    ACTIVE_PROVIDER, ACTIVE_CLIENT, MODEL = "openai", client, OPENAI_MODEL
+elif router_client:
+    ACTIVE_PROVIDER, ACTIVE_CLIENT, MODEL = "openrouter", router_client, OPENROUTER_MODEL
+else:
+    ACTIVE_PROVIDER, ACTIVE_CLIENT, MODEL = AI_PROVIDER, None, OPENAI_MODEL
 SYSTEM = """Du bist Quantum KI Ultra Pro V2, ein leistungsfähiger Forschungs-, Coding- und Projektassistent.
 Antworte in der Sprache des Nutzers. Arbeite strukturiert und konkret. Trenne Fakten, Annahmen und Unsicherheit.
 Nutze Web-Recherche für aktuelle Informationen, wenn sie aktiviert ist. Erfinde keine Quellen, Daten, Aktionen oder Ergebnisse.
@@ -96,32 +107,30 @@ def clean_history(history):
     return out
 
 def ask(message, history, selected_model=None):
-    if not AI_ENABLED: return "Die KI ist derzeit deaktiviert."
-    if not client and not router_client: return "OPENAI_API_KEY oder OPENROUTER_API_KEY ist in Render nicht gesetzt."
-    try:
-        clean = clean_history(history)
-        if router_client:
-            model = selected_model or os.getenv("OPENROUTER_MODEL") or (MODEL if "/" in MODEL else "openai/" + MODEL)
-            if "/" not in model:
-                model = "openai/" + model
-            response = router_client.chat.completions.create(
-                model=model,
-                messages=[{"role": "system", "content": SYSTEM}, *clean, {"role": "user", "content": message}],
-            )
-            return response.choices[0].message.content or "Keine Antwort erhalten."
-        kwargs = {
-            "model": (selected_model or MODEL),
-            "store": False,
-            "input": [{"role": "system", "content": SYSTEM}, *clean, {"role": "user", "content": message}],
-        }
-        if WEB:
-            kwargs["tools"] = [{"type": "web_search", "search_context_size": "medium"}]
-            kwargs["tool_choice"] = "auto"
-        response = client.responses.create(**kwargs)
-        return response.output_text or "Keine Antwort erhalten."
-    except Exception:
-        app.logger.exception("AI API failure")
-        return "Die KI-Schnittstelle ist momentan nicht erreichbar. Prüfe API-Key, Guthaben und Render-Logs."
+    if not AI_ENABLED:
+        raise RuntimeError("Die KI ist derzeit deaktiviert (AI_ENABLED=false).")
+    if ACTIVE_CLIENT is None:
+        raise RuntimeError("Kein KI-Anbieter konfiguriert. Setze OPENAI_API_KEY oder OPENROUTER_API_KEY in Render.")
+    model = MODEL
+    if selected_model and selected_model != MODEL:
+        app.logger.warning("Ignoring unsupported client model selection: %s", selected_model[:120])
+    clean = clean_history(history)
+    if ACTIVE_PROVIDER == "openrouter":
+        response = ACTIVE_CLIENT.chat.completions.create(
+            model=model,
+            messages=[{"role": "system", "content": SYSTEM}, *clean, {"role": "user", "content": message}],
+        )
+        return response.choices[0].message.content or "Keine Antwort erhalten."
+    kwargs = {
+        "model": model,
+        "store": False,
+        "input": [{"role": "system", "content": SYSTEM}, *clean, {"role": "user", "content": message}],
+    }
+    if WEB:
+        kwargs["tools"] = [{"type": "web_search", "search_context_size": "medium"}]
+        kwargs["tool_choice"] = "auto"
+    response = ACTIVE_CLIENT.responses.create(**kwargs)
+    return response.output_text or "Keine Antwort erhalten."
 
 @app.get("/")
 def home():
@@ -216,19 +225,29 @@ def ionos7_chat():
 @app.get("/health")
 @app.get("/api/health")
 def health():
-    return jsonify({"status":"ok","project":"QUANTUM KI ULTRA PRO V2","model":MODEL,"ai_enabled":AI_ENABLED,"web_search":WEB,"openai_configured":bool(client or router_client)})
+    return jsonify({"status":"ok","project":"QUANTUM KI ULTRA PRO V2","model":MODEL,"ai_enabled":AI_ENABLED,"web_search":WEB,"openai_configured":bool(ACTIVE_CLIENT and AI_ENABLED),"provider":ACTIVE_PROVIDER,"models":[{"id":MODEL,"provider":ACTIVE_PROVIDER}] if ACTIVE_CLIENT else []})
 
 @app.post("/api/chat")
 @app.post("/chat")
 def chat():
     ip = request.headers.get("X-Forwarded-For", request.remote_addr or "unknown").split(",")[0].strip()
-    if not allow(ip): return jsonify({"error":"Zu viele Anfragen. Bitte kurz warten."}), 429
+    if not allow(ip):
+        return jsonify({"ok": False, "error": "Zu viele Anfragen. Bitte kurz warten."}), 429
     data = request.get_json(silent=True) or {}
     message = str(data.get("message") or "").strip()
-    selected_model=str(data.get("model") or MODEL).strip()
-    if not message: return jsonify({"error":"message is required"}), 400
-    if len(message) > MAX_INPUT: return jsonify({"error":f"message is too long (max {MAX_INPUT} characters)"}), 413
-    return jsonify({"ok":True,"reply":ask(message, data.get("history"), data.get("model")),"model":data.get("model") or MODEL,"web_search":WEB})
+    if not message:
+        return jsonify({"ok": False, "error": "message is required"}), 400
+    if len(message) > MAX_INPUT:
+        return jsonify({"ok": False, "error": f"message is too long (max {MAX_INPUT} characters)"}), 413
+    try:
+        reply = ask(message, data.get("history"), data.get("model"))
+        return jsonify({"ok": True, "reply": reply, "model": MODEL, "provider": ACTIVE_PROVIDER, "web_search": WEB}), 200
+    except RuntimeError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 503
+    except Exception:
+        app.logger.exception("Ultra KI request failed")
+        return jsonify({"ok": False, "error": "Die KI-Schnittstelle ist fehlgeschlagen. Prüfe API-Key, Modellzugriff, Guthaben und Render-Logs."}), 502
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", "10000")))
