@@ -46,6 +46,19 @@ SYSTEM = """Du bist Quantum KI Ultra Pro V2, ein leistungsfähiger Forschungs-, 
 Antworte in der Sprache des Nutzers. Arbeite strukturiert und konkret. Trenne Fakten, Annahmen und Unsicherheit.
 Nutze Web-Recherche für aktuelle Informationen, wenn sie aktiviert ist. Erfinde keine Quellen, Daten, Aktionen oder Ergebnisse.
 Bei Code: achte auf Sicherheit, Wartbarkeit, Tests, Fehlerbehandlung und Deployment. Liefere direkt umsetzbare Lösungen."""
+
+
+def load_author_research_context():
+    """Load the author's curated research concepts without changing this agent's identity."""
+    from pathlib import Path
+    try:
+        return Path(__file__).with_name("research").joinpath("ADRIANO_IDEENWISSEN.md").read_text(encoding="utf-8")
+    except OSError:
+        app.logger.warning("Author research knowledge file is unavailable")
+        return ""
+
+SYSTEM += "\\n\\nAutorenspezifisches Forschungswissen (mit Evidenzstatus kennzeichnen):\\n" + load_author_research_context()
+
 RATE = defaultdict(lambda: deque(maxlen=30))
 
 def allow(ip):
