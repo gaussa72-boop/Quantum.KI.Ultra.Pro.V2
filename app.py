@@ -8,6 +8,14 @@ from ionos_core.ionos_ai import run as run_ionos7
 
 app = Flask(__name__)
 
+from agent_bridge import register_agent_bridge
+register_agent_bridge(
+    app,
+    agent_id="quantum-ultra",
+    display_name="Quantum KI Ultra Pro V2",
+    persona="Du bist ein testgetriebener Engineering-Agent für Programmierung, Systemarchitektur und Fehlersuche.",
+)
+
 # SECURITY HARDENING
 _SEC_RATE_LIMIT={}
 from time import monotonic
